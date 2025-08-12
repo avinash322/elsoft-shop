@@ -194,24 +194,67 @@ const capitalize = (word) => {
 // Tombol Edit
 const updateProductDialog = ref(false);
 
-const editProduct = () => {
-  console.log("Editing product:", form.value.id);
-  const index = products.value.findIndex((p) => p.id === form.value.id);
-  if (index !== -1) {
-    products.value[index] = { ...form.value };
+const editProduct = async () => {
+  try {
+    const response = await fetch(
+      `https://dummyjson.com/products/${form.value.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: form.value.title,
+          price: form.value.price,
+          stock: form.value.stock,
+          description: form.value.description,
+          brand: form.value.brand,
+          category: form.value.category,
+        }),
+      }
+    );
+
+    const updatedProduct = await response.json();
+
+    // Update produk di UI
+    const index = products.value.findIndex((p) => p.id === form.value.id);
+    if (index !== -1) {
+      products.value[index] = { ...updatedProduct };
+    }
+
+    snackbarMessage.value = "Product updated successfully!";
+    snackbarColor.value = "success";
+    snackbar.value = true;
+    updateProductDialog.value = false;
+  } catch (error) {
+    console.error("Failed to update product:", error);
+    snackbarMessage.value = "Failed to update product!";
+    snackbarColor.value = "error";
+    snackbar.value = true;
   }
-  snackbarMessage.value = "Product updated successfully!";
-  snackbarColor.value = "success";
-  snackbar.value = true;
-  updateProductDialog.value = false;
 };
 
 // Tombol Delete
-const deleteProduct = (id) => {
-  products.value = products.value.filter((p) => p.id !== id);
-  snackbarMessage.value = "Product deleted successfully!";
-  snackbarColor.value = "success";
-  snackbar.value = true;
+const deleteProduct = async (id) => {
+  try {
+    const response = await fetch(`https://dummyjson.com/products/${id}`, {
+      method: "DELETE",
+    });
+    const data = await response.json();
+    console.log("Deleted product:", data);
+
+    // Update UI local
+    products.value = products.value.filter((p) => p.id !== id);
+
+    snackbarMessage.value = "Product deleted successfully!";
+    snackbarColor.value = "success";
+    snackbar.value = true;
+  } catch (error) {
+    console.error("Failed to delete product:", error);
+    snackbarMessage.value = "Failed to delete product.";
+    snackbarColor.value = "error";
+    snackbar.value = true;
+  }
 };
 
 // add product
