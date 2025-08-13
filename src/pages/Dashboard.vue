@@ -14,6 +14,7 @@ import {
   LinearScale,
 } from "chart.js";
 import { VPie } from "vuetify/labs/VPie";
+import { consoleWarn } from "vuetify/lib/util/console.mjs";
 
 ChartJS.register(
   Title,
@@ -60,6 +61,10 @@ const toggleDrawer = () => {
 
 const selectItem = (item) => {
   selected.value = item;
+  searchText.value = "";
+  selectedCategory.value = "All";
+  selectedSort.value = "Default";
+  checkout.value = false;
 };
 
 const user = ref([]);
@@ -166,7 +171,7 @@ const filteredProducts = computed(() => {
   const search = (searchText.value || "").toLowerCase();
   const selected = selectedCategory.value;
 
-  return products.value.filter((p) => {
+  let results = products.value.filter((p) => {
     const name = (p.title || "").toLowerCase();
     const category = capitalize(p.category);
 
@@ -176,6 +181,26 @@ const filteredProducts = computed(() => {
 
     return matchesCategory && matchesName;
   });
+
+  console.warn("Sorting products by:", results);
+
+  switch (selectedSort.value) {
+    case "Name-A-Z":
+      console.warn("Sorting products by Name-A-Z", results);
+      results.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+    case "Price:Low to High":
+      results.sort((a, b) => a.price - b.price);
+      break;
+    case "Price:High to Low":
+      results.sort((a, b) => b.price - a.price);
+      break;
+    case "Highest Rated":
+      results.sort((a, b) => b.rating - a.rating);
+      break;
+  }
+
+  return results;
 });
 
 // Fungsi bantu truncate teks
@@ -322,6 +347,91 @@ onMounted(() => {
   fetchUsers();
   fetchProducts();
 });
+
+// SHOP
+
+const selectedSort = ref(null);
+
+const sortOptions = [
+  "Default",
+  "Name-A-Z",
+  "Price:Low to High",
+  "Price:High to Low",
+  "Highest Rated",
+];
+
+const shopArray = ref([]);
+const cartEmpty = computed(() => shopArray.value.length === 0);
+const totalitems = ref(0);
+const subtotalitems = ref(0);
+
+const addToCart = async (product) => {
+  try {
+    const response = await fetch("https://dummyjson.com/carts/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: 1,
+        products: [
+          {
+            id: 1,
+            quantity: 1,
+          },
+          {
+            id: 2,
+            quantity: 1,
+          },
+          {
+            id: 3,
+            quantity: 1,
+          },
+        ],
+      }),
+    });
+    const data = await response.json();
+
+    const existing = shopArray.value.find((p) => p.id === product.id);
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      shopArray.value.push({
+        ...product,
+        quantity: 1,
+      });
+    }
+    snackbarMessage.value = `${product.title} added to cart!`;
+    snackbarColor.value = "success";
+    snackbar.value = true;
+  } catch (error) {
+    console.error("Failed to added product:", error);
+    snackbarMessage.value = "Failed to added product to chart.";
+    snackbarColor.value = "error";
+    snackbar.value = true;
+  }
+};
+
+// CART
+const removeCart = () => {
+  shopArray.value = [];
+  snackbarMessage.value = "Cart emptied!";
+  snackbarColor.value = "success";
+  snackbar.value = true;
+  checkout.value = false;
+};
+
+const removeItemCart = (item) => {
+  const index = shopArray.value.findIndex((p) => p.id === item.id);
+  if (index !== -1) {
+    shopArray.value.splice(index, 1);
+    snackbarMessage.value = `${item.title} removed from cart!`;
+    snackbarColor.value = "success";
+    snackbar.value = true;
+  }
+};
+
+const checkout = ref(false);
 </script>
 
 <template>
@@ -354,7 +464,16 @@ onMounted(() => {
           link
           @click="selectItem(item)"
           :class="{ 'active-item': selected === item.title }"
-        ></v-list-item>
+        >
+          <template
+            #append
+            v-if="item.title === 'Cart' && shopArray.length > 0"
+          >
+            <v-chip color="gray" size="small" label>
+              {{ shopArray.reduce((sum, item) => sum + item.quantity, 0) }}
+            </v-chip>
+          </template>
+        </v-list-item>
       </v-list>
 
       <!-- Footer -->
@@ -695,7 +814,7 @@ onMounted(() => {
 
                   <v-card-text class="mt-2">
                     <div class="row" style="justify-content: space-between">
-                      <div class="text-h6 font-weight-bold">
+                      <div class="text-h4 font-weight-bold">
                         ${{ product.price.toFixed(2) }}
                       </div>
                       <div class="d-flex align-center mt-1" style="gap: 4px">
@@ -709,8 +828,8 @@ onMounted(() => {
                       <v-chip small outlined>{{
                         capitalize(product.category)
                       }}</v-chip>
-                      <span class="grey--text text--darken-1 float-right"
-                        >Stock: {{ product.stock }}</span
+                      <span class="grey--text text--darken-1 float-right">
+                        {{ product.stock }}</span
                       >
                     </div>
                   </v-card-text>
@@ -815,6 +934,558 @@ onMounted(() => {
                 </v-card-text>
               </v-card>
             </v-dialog>
+          </v-container>
+        </template>
+        <template v-else-if="selected.title === 'Shop'">
+          <h1 class="title" style="margin: 0">{{ selected.title ?? "" }}</h1>
+          <h2 class="h2-gray" style="margin-top: 8px">
+            {{ selected.subtitle ?? "" }}
+          </h2>
+          <v-container fluid>
+            <!-- Filter kategori -->
+            <div class="row" style="display: flex; gap: 8px">
+              <v-text-field
+                v-model="searchText"
+                label="search products..."
+                prepend-icon="mdi-magnify"
+                variant="outlined"
+                style="flex: 0 0 50%"
+                hide-details
+              ></v-text-field>
+
+              <v-select
+                v-model="selectedCategory"
+                :items="categories"
+                label="Filter by Category"
+                style="flex: 0 0 25%; margin-top: 18px"
+                clearable
+                outlined
+              ></v-select>
+
+              <v-select
+                v-model="selectedSort"
+                :items="sortOptions"
+                label="Default"
+                style="flex: 0 0 25%; margin-top: 18px"
+                clearable
+                outlined
+              ></v-select>
+            </div>
+
+            <!-- Grid produk -->
+            <v-row dense>
+              <v-col
+                v-for="product in filteredProducts.slice()"
+                :key="product.id"
+                cols="12"
+                sm="6"
+                md="4"
+                lg="3"
+              >
+                <v-card position="relative">
+                  <v-chip
+                    v-if="product.discountPercentage > 0"
+                    color="#ff0000"
+                    text-color="white"
+                    class="discount-chip"
+                    variant="flat"
+                  >
+                    -{{ Math.round(product.discountPercentage) }}%
+                  </v-chip>
+                  <v-img
+                    :src="
+                      product.thumbnail ||
+                      'https://via.placeholder.com/200x200?text=No+Image'
+                    "
+                    height="200px"
+                  />
+
+                  <v-card-title class="text-wrap">
+                    {{ truncate(product.title, 20) }}
+                  </v-card-title>
+
+                  <v-card-subtitle>
+                    {{ truncate(product.description, 70) }}
+                  </v-card-subtitle>
+
+                  <v-card-text class="mt-2">
+                    <div class="row" style="justify-content: space-between">
+                      <div class="row" style="justify-content: space-between">
+                        <div class="text-h4 font-weight-bold">
+                          ${{ product.price.toFixed(2) }}
+                        </div>
+                        <h3
+                          class="text-grey text-decoration-line-through"
+                          style="
+                            font-weight: normal;
+                            text-decoration-thickness: 3px;
+                            text-decoration-color: black;
+                          "
+                        >
+                          ${{
+                            (
+                              product.price *
+                              (1 + product.discountPercentage / 100)
+                            ).toFixed(2)
+                          }}
+                        </h3>
+                      </div>
+                      <div class="d-flex align-center mt-1" style="gap: 4px">
+                        <v-icon color="yellow darken-2" size="18"
+                          >mdi-star</v-icon
+                        >
+                        <span>{{ product.rating?.toFixed(2) ?? "" }}</span>
+                      </div>
+                    </div>
+                    <div class="mt-2">
+                      <v-chip small outlined>{{
+                        capitalize(product.category)
+                      }}</v-chip>
+                      <span class="grey--text text--darken-1 float-right"
+                        >{{ product.stock }} in Stock</span
+                      >
+                    </div>
+                  </v-card-text>
+
+                  <v-card-actions style="justify-content: center">
+                    <v-btn
+                      prepend-icon="mdi-cart-outline"
+                      color="black"
+                      style="text-transform: capitalize; width: 80%"
+                      size="large"
+                      variant="elevated"
+                      @click="addToCart(product)"
+                    >
+                      Add to Chart
+                    </v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </template>
+        <template v-else-if="selected.title === 'Cart'">
+          <v-container
+            fluid
+            class="d-flex flex-column align-center justify-center"
+            v-if="cartEmpty"
+          >
+            <v-icon size="128" color="grey lighten-1"
+              >mdi-shopping-outline</v-icon
+            >
+            <h1 class="title">Your Cart is Empty</h1>
+            <h2 class="h2" style="font-weight: normal">
+              Add some products to get started
+            </h2>
+            <divider class="divider-small" />
+            <v-btn
+              color="black"
+              style="text-transform: capitalize; width: 30%"
+              size="large"
+              variant="elevated"
+              @click="
+                selectItem({
+                  title: 'Shop',
+                  subtitle: 'Browse and purchase products',
+                })
+              "
+            >
+              Continue Shopping
+            </v-btn>
+          </v-container>
+
+          <v-container v-else fluid>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              <div>
+                <h1 class="title" style="margin: 0">
+                  {{ checkout ? "Checkout" : selected.title ?? "" }}
+                </h1>
+                <h2 class="h2-gray" style="margin-top: 8px">
+                  {{
+                    checkout
+                      ? "Complete your purchase"
+                      : shopArray.length + " items in your cart"
+                  }}
+                </h2>
+              </div>
+              <v-btn v-if="!checkout" @click="removeCart"> Clear cart </v-btn>
+            </div>
+            <v-container fluid style="gap: 2%">
+              <v-row>
+                <!-- Kiri 70% -->
+                <v-col cols="12" md="8">
+                  <v-container class="grey-container" fluid v-if="!checkout">
+                    <v-row
+                      v-for="(product, index) in shopArray"
+                      :key="product.id"
+                      class="align-center mb-4"
+                      dense
+                    >
+                      <!-- Icon -->
+                      <v-img
+                        :src="
+                          product.thumbnail ||
+                          'https://via.placeholder.com/200x200?text=No+Image'
+                        "
+                        height="200px"
+                      />
+
+                      <!-- Product info -->
+                      <v-col>
+                        <h2 class="h2 mb-1">{{ product.title }}</h2>
+                        <h1 class="h1">${{ product.price.toFixed(2) }}</h1>
+                      </v-col>
+
+                      <!-- Quantity input -->
+                      <v-number-input
+                        control-variant="split"
+                        :min="1"
+                        v-model="product.quantity"
+                        class="number-input-small"
+                      />
+
+                      <!-- Total & delete -->
+                      <v-col
+                        cols="auto"
+                        class="d-flex flex-column align-center"
+                      >
+                        <h2 class="h2 mb-2">
+                          ${{ (product.price * product.quantity).toFixed(2) }}
+                        </h2>
+                        <v-btn
+                          icon
+                          color="red"
+                          variant="text"
+                          @click="removeItemCart(product)"
+                          style="width: 50px; height: 50px; border-radius: 50%"
+                        >
+                          <v-icon size="36">mdi-delete-outline</v-icon>
+                        </v-btn>
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                  <v-container fluid v-else-if="checkout" class="pa-0">
+                    <v-container class="grey-container" fluid>
+                      <h1 class="h1" styl>Shipping Information</h1>
+                      <divider class="divider-xs" />
+                      <v-row>
+                        <v-col cols="12" md="6">
+                          <h3>First Name</h3>
+                          <v-text-field variant="outlined" required
+                            >emily</v-text-field
+                          >
+                        </v-col>
+                        <v-col cols="12" md="6">
+                          <h3>Last Name</h3>
+                          <v-text-field variant="outlined" required
+                            >Johnson</v-text-field
+                          >
+                        </v-col>
+                      </v-row>
+                      <v-row>
+                        <v-col cols="12" md="6">
+                          <h3>Email</h3>
+                          <v-text-field variant="outlined" required
+                            >emily.johnson@x.dummyjson.com</v-text-field
+                          >
+                        </v-col>
+                        <v-col cols="12" md="6">
+                          <h3>Phone</h3>
+                          <v-text-field
+                            variant="outlined"
+                            required
+                          ></v-text-field>
+                        </v-col>
+                      </v-row>
+                      <v-row>
+                        <v-col>
+                          <h3>Address</h3>
+                          <v-text-field
+                            variant="outlined"
+                            required
+                          ></v-text-field>
+                        </v-col>
+                      </v-row>
+                      <v-row>
+                        <v-col cols="12" md="4">
+                          <h3>City</h3>
+                          <v-text-field
+                            variant="outlined"
+                            required
+                          ></v-text-field>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                          <h3>State</h3>
+                          <v-text-field
+                            variant="outlined"
+                            required
+                          ></v-text-field>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                          <h3>Zip Code</h3>
+                          <v-text-field
+                            variant="outlined"
+                            required
+                          ></v-text-field>
+                        </v-col>
+                      </v-row>
+                    </v-container>
+                    <Divider class="divider-xs" />
+                    <v-container class="grey-container" fluid>
+                      <h1 class="h1" styl>Payment Information</h1>
+                      <divider class="divider-xs" />
+                      <v-row>
+                        <v-col>
+                          <h3>Cardholder Name</h3>
+                          <v-text-field
+                            variant="outlined"
+                            required
+                          ></v-text-field>
+                        </v-col>
+                      </v-row>
+                      <v-row>
+                        <v-col>
+                          <h3>Card Number</h3>
+                          <v-text-field
+                            variant="outlined"
+                            required
+                            label="1234 5678 9012 3456"
+                          ></v-text-field>
+                        </v-col>
+                      </v-row>
+                      <v-row>
+                        <v-col cols="12" md="6">
+                          <h3>Expiry</h3>
+                          <v-text-field
+                            variant="outlined"
+                            required
+                            label="MM/YY"
+                          ></v-text-field>
+                        </v-col>
+                        <v-col cols="12" md="6">
+                          <h3>CVV</h3>
+                          <v-text-field
+                            variant="outlined"
+                            required
+                            label="123"
+                          ></v-text-field>
+                        </v-col>
+                      </v-row>
+                    </v-container>
+                  </v-container>
+                </v-col>
+
+                <!-- Kanan 30% -->
+                <v-col cols="12" md="4">
+                  <v-container class="grey-container" v-if="!checkout">
+                    <h2 class="h2">Order Summary</h2>
+                    <v-container
+                      class="row"
+                      style="justify-content: space-between"
+                    >
+                      <h3 class="h3" style="font-weight: normal">Subtotal</h3>
+                      <h3 class="h3" style="font-weight: normal">
+                        ${{
+                          shopArray
+                            .reduce((sum, p) => sum + p.price * p.quantity, 0)
+                            .toFixed(2)
+                        }}
+                      </h3>
+                    </v-container>
+                    <v-container
+                      class="row"
+                      style="justify-content: space-between"
+                    >
+                      <h3 class="h3" style="font-weight: normal">Shipping</h3>
+                      <h3 class="h3" style="font-weight: normal">Free</h3>
+                    </v-container>
+                    <v-container
+                      class="row"
+                      style="justify-content: space-between"
+                    >
+                      <h3 class="h3" style="font-weight: normal">Tax</h3>
+                      <h3 class="h3" style="font-weight: normal">$1.00</h3>
+                    </v-container>
+                    <v-divider class="divider-xs" thickness="2" />
+                    <v-container
+                      class="row"
+                      style="justify-content: space-between"
+                    >
+                      <h3 class="h2">Total</h3>
+                      <h3 class="h2">
+                        ${{
+                          (
+                            shopArray.reduce(
+                              (sum, p) => sum + p.price * p.quantity,
+                              0
+                            ) + 1
+                          ).toFixed(2)
+                        }}
+                      </h3>
+                    </v-container>
+                    <v-btn
+                      color="black"
+                      style="text-transform: capitalize; width: 100%"
+                      size="large"
+                      variant="elevated"
+                      class="mt-4"
+                      @click="checkout = true"
+                    >
+                      Proceed to Checkout
+                    </v-btn>
+                    <v-btn
+                      color="white"
+                      style="text-transform: capitalize; width: 100%"
+                      size="large"
+                      variant="elevated"
+                      class="mt-4"
+                      @click="
+                        selectItem({
+                          title: 'Shop',
+                          subtitle: 'Browse and purchase products',
+                        })
+                      "
+                    >
+                      Continue Shopping
+                    </v-btn>
+                  </v-container>
+                  <v-container class="grey-container" v-else-if="checkout">
+                    <h2 class="h2">Order Summary</h2>
+                    <v-row
+                      v-for="(product, index) in shopArray"
+                      :key="product.id"
+                      class="align-center mb-4"
+                      dense
+                    >
+                      <!-- Icon -->
+                      <v-img
+                        :src="
+                          product.thumbnail ||
+                          'https://via.placeholder.com/200x200?text=No+Image'
+                        "
+                        height="50px"
+                      />
+
+                      <!-- Product info -->
+                      <v-col>
+                        <h3
+                          class="h3 mb-1"
+                          style="
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                            max-width: 200px;
+                          "
+                        >
+                          {{ product.title }}
+                        </h3>
+
+                        <h3 class="h3-gray">Qty:{{ product.quantity }}</h3>
+                      </v-col>
+
+                      <!-- Total & delete -->
+                      <v-col
+                        cols="auto"
+                        class="d-flex flex-column align-center"
+                      >
+                        <h2 class="h2 mb-2" style="font-weight: normal">
+                          ${{ (product.price * product.quantity).toFixed(2) }}
+                        </h2>
+                      </v-col>
+                    </v-row>
+                    <v-divider class="divider-xs" thickness="2" />
+                    <v-container
+                      class="row"
+                      style="justify-content: space-between"
+                    >
+                      <h3 class="h3" style="font-weight: normal">Subtotal</h3>
+                      <h3 class="h3" style="font-weight: normal">
+                        ${{
+                          shopArray
+                            .reduce((sum, p) => sum + p.price * p.quantity, 0)
+                            .toFixed(2)
+                        }}
+                      </h3>
+                    </v-container>
+                    <v-container
+                      class="row"
+                      style="justify-content: space-between"
+                    >
+                      <h3 class="h3" style="font-weight: normal">Shipping</h3>
+                      <h3 class="h3" style="font-weight: normal">Free</h3>
+                    </v-container>
+                    <v-container
+                      class="row"
+                      style="justify-content: space-between"
+                    >
+                      <h3 class="h3" style="font-weight: normal">Tax</h3>
+                      <h3 class="h3" style="font-weight: normal">$1.00</h3>
+                    </v-container>
+                    <v-divider class="divider-xs" thickness="2" />
+                    <v-container
+                      class="row"
+                      style="justify-content: space-between"
+                    >
+                      <h3 class="h2">Total</h3>
+                      <h3 class="h2">
+                        ${{
+                          (
+                            shopArray.reduce(
+                              (sum, p) => sum + p.price * p.quantity,
+                              0
+                            ) + 1
+                          ).toFixed(2)
+                        }}
+                      </h3>
+                    </v-container>
+                    <v-btn
+                      color="black"
+                      style="text-transform: capitalize; width: 100%"
+                      size="large"
+                      variant="elevated"
+                      class="mt-4"
+                      @click="checkout = true"
+                    >
+                      Complete Order
+                    </v-btn>
+                  </v-container>
+                </v-col>
+              </v-row>
+            </v-container>
+          </v-container>
+        </template>
+
+        <template v-else-if="selected.title === 'Orders'">
+          <v-container
+            fluid
+            class="d-flex flex-column align-center justify-center"
+          >
+            <v-icon size="128" color="grey lighten-1">mdi-history</v-icon>
+            <h1 class="title">Your Orders is Empty</h1>
+            <h2 class="h2" style="font-weight: normal">
+              Add some products to get started
+            </h2>
+            <divider class="divider-small" />
+            <v-btn
+              color="black"
+              style="text-transform: capitalize; width: 30%"
+              size="large"
+              variant="elevated"
+              @click="
+                selectItem({
+                  title: 'Shop',
+                  subtitle: 'Browse and purchase products',
+                })
+              "
+            >
+              Continue Shopping
+            </v-btn>
           </v-container>
         </template>
       </v-container>

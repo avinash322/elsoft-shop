@@ -420,3 +420,14 @@
   font-weight: bold;
   font-size: 5rem;
 }
+
+.discount-chip {
+  color: red;
+  margin: 10%;
+  padding: 8px;
+}
+
+.number-input-small .v-input__control {
+  width: 30% !important;
+  min-width: 50% !important;
+}
