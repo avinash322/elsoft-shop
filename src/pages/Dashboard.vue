@@ -1,5 +1,5 @@
 <script setup>
-import { Subtitles } from "lucide-vue-next";
+import { Divide, Subtitles } from "lucide-vue-next";
 import { ref, onMounted, computed, reactive } from "vue";
 import { fa } from "vuetify/locale";
 import { Chart } from "chart.js/auto";
@@ -362,8 +362,17 @@ const sortOptions = [
 
 const shopArray = ref([]);
 const cartEmpty = computed(() => shopArray.value.length === 0);
-const totalitems = ref(0);
-const subtotalitems = ref(0);
+// Subtotal per item
+const subtotalPerItem = (product) =>
+  (product.price * product.quantity).toFixed(2);
+// Subtotal semua item
+const subtotalItems = computed(() =>
+  shopArray.value.reduce((sum, p) => sum + p.price * p.quantity, 0).toFixed(2)
+);
+// Total items (misal ada tambahan fee 1 dollar)
+const totalItems = computed(() =>
+  (parseFloat(subtotalItems.value) + 1).toFixed(2)
+);
 
 const addToCart = async (product) => {
   try {
@@ -432,6 +441,40 @@ const removeItemCart = (item) => {
 };
 
 const checkout = ref(false);
+
+const completeOrder = () => {
+  if (shopArray.value.length === 0) {
+    snackbarMessage.value = "Your cart is empty!";
+    snackbarColor.value = "error";
+    snackbar.value = true;
+    return;
+  }
+
+  historyArray.value.push({
+    id: Math.floor(Math.random() * 10000000000000),
+    items: [...shopArray.value],
+    date: new Date().toLocaleDateString(),
+    total: totalItems.value,
+    subtotalItems: subtotalItems.value,
+    subtotalPerItem: shopArray.value.map((item) => ({
+      ...item,
+      subtotal: (item.price * item.quantity).toFixed(2),
+    })),
+  });
+
+  console.log("Order completed:", shopArray.value);
+  snackbarMessage.value = "Order completed successfully!";
+  snackbarColor.value = "success";
+  snackbar.value = true;
+
+  // Clear cart after order completion
+  shopArray.value = [];
+  checkout.value = false;
+};
+
+// HISTORY ORDERS
+const historyArray = ref([]);
+const historyDetail = ref(false);
 </script>
 
 <template>
@@ -1120,20 +1163,24 @@ const checkout = ref(false);
               <v-row>
                 <!-- Kiri 70% -->
                 <v-col cols="12" md="8">
-                  <v-container class="grey-container" fluid v-if="!checkout">
-                    <v-row
-                      v-for="(product, index) in shopArray"
-                      :key="product.id"
-                      class="align-center mb-4"
-                      dense
-                    >
-                      <!-- Icon -->
-                      <v-img
+                  <!-- Looping container per product -->
+                  <v-container
+                    v-for="(product, index) in shopArray"
+                    :key="product.id"
+                    class="grey-container"
+                    style="margin-bottom: 16px"
+                    fluid
+                    v-if="!checkout"
+                  >
+                    <v-row class="align-center" dense>
+                      <!-- Icon / Image -->
+                      <img
                         :src="
                           product.thumbnail ||
                           'https://via.placeholder.com/200x200?text=No+Image'
                         "
-                        height="200px"
+                        height="150px"
+                        width="150px"
                       />
 
                       <!-- Product info -->
@@ -1143,6 +1190,7 @@ const checkout = ref(false);
                       </v-col>
 
                       <!-- Quantity input -->
+
                       <v-number-input
                         control-variant="split"
                         :min="1"
@@ -1150,14 +1198,12 @@ const checkout = ref(false);
                         class="number-input-small"
                       />
 
-                      <!-- Total & delete -->
+                      <!-- Total & Delete -->
                       <v-col
                         cols="auto"
                         class="d-flex flex-column align-center"
                       >
-                        <h2 class="h2 mb-2">
-                          ${{ (product.price * product.quantity).toFixed(2) }}
-                        </h2>
+                        <h2 class="h2 mb-2">${{ subtotalPerItem(product) }}</h2>
                         <v-btn
                           icon
                           color="red"
@@ -1170,6 +1216,7 @@ const checkout = ref(false);
                       </v-col>
                     </v-row>
                   </v-container>
+
                   <v-container fluid v-else-if="checkout" class="pa-0">
                     <v-container class="grey-container" fluid>
                       <h1 class="h1" styl>Shipping Information</h1>
@@ -1291,11 +1338,7 @@ const checkout = ref(false);
                     >
                       <h3 class="h3" style="font-weight: normal">Subtotal</h3>
                       <h3 class="h3" style="font-weight: normal">
-                        ${{
-                          shopArray
-                            .reduce((sum, p) => sum + p.price * p.quantity, 0)
-                            .toFixed(2)
-                        }}
+                        ${{ subtotalItems }}
                       </h3>
                     </v-container>
                     <v-container
@@ -1318,16 +1361,7 @@ const checkout = ref(false);
                       style="justify-content: space-between"
                     >
                       <h3 class="h2">Total</h3>
-                      <h3 class="h2">
-                        ${{
-                          (
-                            shopArray.reduce(
-                              (sum, p) => sum + p.price * p.quantity,
-                              0
-                            ) + 1
-                          ).toFixed(2)
-                        }}
-                      </h3>
+                      <h3 class="h2">${{ totalItems }}</h3>
                     </v-container>
                     <v-btn
                       color="black"
@@ -1364,12 +1398,12 @@ const checkout = ref(false);
                       dense
                     >
                       <!-- Icon -->
-                      <v-img
+                      <img
                         :src="
                           product.thumbnail ||
                           'https://via.placeholder.com/200x200?text=No+Image'
                         "
-                        height="50px"
+                        height="80px"
                       />
 
                       <!-- Product info -->
@@ -1406,11 +1440,7 @@ const checkout = ref(false);
                     >
                       <h3 class="h3" style="font-weight: normal">Subtotal</h3>
                       <h3 class="h3" style="font-weight: normal">
-                        ${{
-                          shopArray
-                            .reduce((sum, p) => sum + p.price * p.quantity, 0)
-                            .toFixed(2)
-                        }}
+                        ${{ subtotalItems }}
                       </h3>
                     </v-container>
                     <v-container
@@ -1433,16 +1463,7 @@ const checkout = ref(false);
                       style="justify-content: space-between"
                     >
                       <h3 class="h2">Total</h3>
-                      <h3 class="h2">
-                        ${{
-                          (
-                            shopArray.reduce(
-                              (sum, p) => sum + p.price * p.quantity,
-                              0
-                            ) + 1
-                          ).toFixed(2)
-                        }}
-                      </h3>
+                      <h3 class="h2">${{ totalItems }}</h3>
                     </v-container>
                     <v-btn
                       color="black"
@@ -1450,7 +1471,7 @@ const checkout = ref(false);
                       size="large"
                       variant="elevated"
                       class="mt-4"
-                      @click="checkout = true"
+                      @click="completeOrder"
                     >
                       Complete Order
                     </v-btn>
@@ -1465,6 +1486,7 @@ const checkout = ref(false);
           <v-container
             fluid
             class="d-flex flex-column align-center justify-center"
+            v-if="historyArray.length === 0"
           >
             <v-icon size="128" color="grey lighten-1">mdi-history</v-icon>
             <h1 class="title">Your Orders is Empty</h1>
@@ -1486,6 +1508,185 @@ const checkout = ref(false);
             >
               Continue Shopping
             </v-btn>
+          </v-container>
+          <v-container
+            fluid
+            class="d-flex flex-column justify-center"
+            v-else-if="historyArray.length > 0"
+          >
+            <h1 class="title" style="margin: 0">Order History</h1>
+            <h2 class="h2-gray" style="margin-top: 8px">
+              Track and manage your orders
+            </h2>
+            <Divider class="divider-small" />
+            <!-- Looping setiap order -->
+            <div
+              v-for="history in historyArray"
+              :key="history.id"
+              class="grey-container"
+              style="
+                padding: 16px;
+                margin-bottom: 16px;
+                display: flex;
+                flex-direction: column;
+              "
+            >
+              <!-- Header -->
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <h1 style="font-weight: normal">Order #{{ history.id }}</h1>
+                  <v-chip color="green" text-color="white" variant="elevated"
+                    >Completed</v-chip
+                  >
+                </div>
+                <v-btn
+                  @click="historyDetail = true"
+                  prepend-icon="mdi-eye-outline"
+                  style="text-transform: capitalize"
+                >
+                  View Details
+                </v-btn>
+              </div>
+
+              <!-- Info -->
+              <div
+                style="
+                  display: flex;
+                  gap: 8px;
+                  margin-top: 8px;
+                  align-items: center;
+                "
+              >
+                <v-icon color="grey">mdi-calendar-outline</v-icon>
+                <h3 class="h3-gray">{{ history.date }}</h3>
+                <v-icon color="grey">mdi-currency-usd</v-icon>
+                <h3 class="h3-gray">${{ history.total }}</h3>
+                <v-icon color="grey">mdi-cube-outline</v-icon>
+                <h3 class="h3-gray">{{ history.items.length }} items</h3>
+              </div>
+
+              <!-- Gambar produk -->
+              <div
+                style="
+                  display: flex;
+                  flex-direction: row;
+                  flex-wrap: nowrap;
+                  gap: 8px;
+                  margin-top: 8px;
+                  justify-content: flex-start;
+                "
+              >
+                <img
+                  v-for="item in history.items"
+                  :key="item.id"
+                  :src="
+                    item.thumbnail ||
+                    `https://via.placeholder.com/100x100?text=No+Image`
+                  "
+                  height="100"
+                  width="100"
+                  style="flex-shrink: 0; display: block"
+                />
+              </div>
+            </div>
+
+            <!-- MODAL HISTORY DETAIL -->
+            <v-dialog v-model="historyDetail" max-width="1000" scrollable>
+              <template #default>
+                <div class="dialog-scroll">
+                  <v-card style="padding: 20px">
+                    <v-card-title style="display: flex; align-items: center">
+                      <div class="column" style="align-items: flex-start">
+                        <h2 class="h2" style="margin: 0">
+                          Order #1755096124109 Details
+                        </h2>
+                        <h3 class="h3-gray">Order placed on 8/13/2025</h3>
+                      </div>
+                      <v-spacer></v-spacer>
+                      <v-btn icon @click="historyDetail = false" variant="text">
+                        <v-icon>mdi-close</v-icon>
+                      </v-btn>
+                    </v-card-title>
+
+                    <v-card-text>
+                      <v-row class="mb-2">
+                        <v-col cols="6">
+                          <h2 class="h2">Order Status</h2>
+
+                          <v-chip
+                            color="green"
+                            text-color="white"
+                            variant="elevated"
+                          >
+                            Completed
+                          </v-chip>
+                        </v-col>
+
+                        <v-col cols="6">
+                          <h2 class="h2">Total Amount</h2>
+                          <h2 class="h1">$10.99</h2>
+                        </v-col>
+                      </v-row>
+                      <divider class="divider-small" />
+                      <h2 class="h2">Items Ordered</h2>
+                      <divider class="divider-xs" />
+                      <v-container class="grey-container">
+                        <v-row class="align-center" no-gutters>
+                          <v-col cols="auto">
+                            <v-img
+                              :src="'https://dummyjson.com/image/i/products/1/thumbnail.jpg'"
+                              height="75"
+                              width="75"
+                            ></v-img>
+                          </v-col>
+
+                          <v-col>
+                            <h2 class="h2 mb-1" style="font-weight: normal">
+                              Product Name
+                            </h2>
+                            <h3 class="h3-gray mb-0">Quantity: 3 x $3.66</h3>
+                          </v-col>
+                          <v-col
+                            cols="auto"
+                            class="d-flex align-center justify-end"
+                          >
+                            <h2 class="h2">$99</h2>
+                          </v-col>
+                        </v-row>
+                      </v-container>
+                      <divider class="divider-small" />
+                      <h2 class="h2">Shipping Information</h2>
+                      <divider class="divider-xs" />
+                      <v-container class="grey-fill-container">
+                        <h3 class="h3">Emily Johnson</h3>
+                        <h3 class="h3" style="font-weight: normal">Jalan</h3>
+                        <h3 class="h3" style="font-weight: normal">
+                          Jakarta Pusat,Jakarta 123
+                        </h3>
+                        <h3
+                          class="h3"
+                          style="color: #868686; font-weight: normal"
+                        >
+                          Email: emily.johnson@x.dummyjson.com
+                        </h3>
+                        <h3
+                          class="h3"
+                          style="color: #868686; font-weight: normal"
+                        >
+                          Phone: 1
+                        </h3>
+                      </v-container>
+                    </v-card-text>
+                  </v-card>
+                </div>
+              </template>
+            </v-dialog>
           </v-container>
         </template>
       </v-container>
