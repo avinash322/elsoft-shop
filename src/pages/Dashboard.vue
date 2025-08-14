@@ -1513,7 +1513,7 @@ const closeHistoryDetail = () => {
                           product.thumbnail ||
                           'https://icons.veryicon.com/png/o/miscellaneous/fu-jia-intranet/product-29.png'
                         "
-                        height="80px"
+                        height="50px"
                       />
 
                       <!-- Product info -->
