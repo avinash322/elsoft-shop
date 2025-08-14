@@ -1269,13 +1269,15 @@ const closeHistoryDetail = () => {
                       </v-col>
 
                       <!-- Quantity input -->
-
-                      <v-number-input
-                        control-variant="split"
-                        :min="1"
-                        v-model="product.quantity"
-                        class="number-input-small"
-                      />
+                      <v-col cols="4">
+                        <v-number-input
+                          control-variant="split"
+                          :min="1"
+                          v-model="product.quantity"
+                          class="number-input-small"
+                          style="width: 150%"
+                        />
+                      </v-col>
 
                       <!-- Total & Delete -->
                       <v-col

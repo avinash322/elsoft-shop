@@ -1,5 +1,5 @@
 :root {
-  font-family: "Montserrat", "Outfit", sans-serif;
+  font-family: "Outfit", "Montserrat", sans-serif;
   line-height: 1.5;
   font-weight: 400;
   --v-theme-on-surface: black !important;
@@ -28,22 +28,22 @@
   color: #082536;
 }
 .h1 {
-  font-size: 35px;
+  font-size: 30px;
   font-weight: bold;
   color: #082536;
 }
 .h2 {
-  font-size: 25px;
+  font-size: 22px;
   font-weight: bold;
   color: #082536;
 }
 .h2-gray {
-  font-size: 25px;
+  font-size: 22px;
   color: #c0c0c0;
   font-weight: normal;
 }
 .h3 {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: bold;
   color: #082536;
 }
@@ -51,18 +51,18 @@
   color: black !important;
 }
 .h3-gray {
-  font-size: 18px;
+  font-size: 15px;
   color: #c0c0c0;
   font-weight: normal;
 }
 .h4 {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
   color: #082536;
 }
 
 .h4-gray {
-  font-size: 14px;
+  font-size: 12px;
   color: #c0c0c0;
   font-weight: normal;
 }
