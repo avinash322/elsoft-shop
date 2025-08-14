@@ -75,6 +75,16 @@ const fetchUsers = () => {
     .then((res) => res.json())
     .then((data) => {
       user.value = data.users || [];
+      if (user.value.length > 0) {
+        firstName.value = user.value[0].firstName || "";
+        lastName.value = user.value[0].lastName || "";
+        Email.value = user.value[0].email || "";
+        address.value = user.value[0].address?.address || "";
+        phone.value = user.value[0].phone || "";
+        city.value = user.value[0].address?.city || "";
+        state.value = user.value[0].address?.state || "";
+        zip.value = user.value[0].address?.postalCode || "";
+      }
     })
     .catch((err) => {
       console.error("Error fetching users:", err);
@@ -374,6 +384,22 @@ const totalItems = computed(() =>
   (parseFloat(subtotalItems.value) + 1).toFixed(2)
 );
 
+// FORM ORDER
+// shipping information
+const firstName = ref("");
+const lastName = ref("");
+const Email = ref("");
+const address = ref("");
+const phone = ref("");
+const city = ref("");
+const state = ref("");
+const zip = ref("");
+// payment information
+const cardName = ref("");
+const cardNumber = ref("");
+const cardExpiry = ref("");
+const cardCVV = ref("");
+
 const addToCart = async (product) => {
   try {
     const response = await fetch("https://dummyjson.com/carts/add", {
@@ -450,10 +476,41 @@ const completeOrder = () => {
     return;
   }
 
+  if (
+    !firstName.value ||
+    !lastName.value ||
+    !Email.value ||
+    !address.value ||
+    !phone.value ||
+    !city.value ||
+    !state.value ||
+    !zip.value ||
+    !cardName.value ||
+    !cardNumber.value ||
+    !cardExpiry.value ||
+    !cardCVV.value
+  ) {
+    snackbarMessage.value = "Please fill in all fields!";
+    snackbarColor.value = "";
+    snackbar.value = true;
+    return;
+  }
   historyArray.value.push({
     id: Math.floor(Math.random() * 10000000000000),
     items: [...shopArray.value],
-    date: new Date().toLocaleDateString(),
+    date: new Date().toLocaleDateString("en-GB"),
+    firstName: firstName.value,
+    lastName: lastName.value,
+    email: Email.value,
+    address: address.value,
+    phone: phone.value,
+    city: city.value,
+    state: state.value,
+    zip: zip.value,
+    cardName: cardName.value,
+    cardNumber: cardNumber.value,
+    cardExpiry: cardExpiry.value,
+    cardCVV: cardCVV.value,
     total: totalItems.value,
     subtotalItems: subtotalItems.value,
     subtotalPerItem: shopArray.value.map((item) => ({
@@ -461,6 +518,11 @@ const completeOrder = () => {
       subtotal: (item.price * item.quantity).toFixed(2),
     })),
   });
+
+  cardName.value = "";
+  cardNumber.value = "";
+  cardExpiry.value = "";
+  cardCVV.value = "";
 
   console.log("Order completed:", shopArray.value);
   snackbarMessage.value = "Order completed successfully!";
@@ -475,6 +537,17 @@ const completeOrder = () => {
 // HISTORY ORDERS
 const historyArray = ref([]);
 const historyDetail = ref(false);
+const selectedHistory = ref(null);
+
+const openHistoryDetail = (history) => {
+  historyDetail.value = true;
+  selectedHistory.value = history;
+};
+
+const closeHistoryDetail = () => {
+  historyDetail.value = false;
+  selectedHistory.value = null;
+};
 </script>
 
 <template>
@@ -534,17 +607,7 @@ const historyDetail = ref(false);
           "
         >
           <v-avatar size="32">
-            <v-img
-              :src="
-                user?.[0]?.avatarUrl ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  user?.[0]?.firstName || 'U'
-                )}+${encodeURIComponent(
-                  user?.[0]?.lastName || 'S'
-                )}&background=random&color=fff&size=32`
-              "
-              alt="User Avatar"
-            ></v-img>
+            <v-img :src="user?.[0]?.image" alt="User Avatar"></v-img>
           </v-avatar>
 
           <span>
@@ -842,7 +905,7 @@ const historyDetail = ref(false);
                   <v-img
                     :src="
                       product.thumbnail ||
-                      'https://via.placeholder.com/200x200?text=No+Image'
+                      'https://icons.veryicon.com/png/o/miscellaneous/fu-jia-intranet/product-29.png'
                     "
                     height="200px"
                   />
@@ -864,7 +927,7 @@ const historyDetail = ref(false);
                         <v-icon color="yellow darken-2" size="18"
                           >mdi-star</v-icon
                         >
-                        <span>{{ product.rating?.toFixed(2) ?? "" }}</span>
+                        <span>{{ product.rating?.toFixed(2) ?? 0 }}</span>
                       </div>
                     </div>
                     <div class="mt-2">
@@ -1027,18 +1090,17 @@ const historyDetail = ref(false);
               >
                 <v-card position="relative">
                   <v-chip
-                    v-if="product.discountPercentage > 0"
                     color="#ff0000"
                     text-color="white"
                     class="discount-chip"
                     variant="flat"
                   >
-                    -{{ Math.round(product.discountPercentage) }}%
+                    -{{ Math.round(product.discountPercentage) || 0 }}%
                   </v-chip>
                   <v-img
                     :src="
                       product.thumbnail ||
-                      'https://via.placeholder.com/200x200?text=No+Image'
+                      'https://icons.veryicon.com/png/o/miscellaneous/fu-jia-intranet/product-29.png'
                     "
                     height="200px"
                   />
@@ -1077,7 +1139,7 @@ const historyDetail = ref(false);
                         <v-icon color="yellow darken-2" size="18"
                           >mdi-star</v-icon
                         >
-                        <span>{{ product.rating?.toFixed(2) ?? "" }}</span>
+                        <span>{{ product.rating?.toFixed(2) ?? 0 }}</span>
                       </div>
                     </div>
                     <div class="mt-2">
@@ -1177,7 +1239,7 @@ const historyDetail = ref(false);
                       <img
                         :src="
                           product.thumbnail ||
-                          'https://via.placeholder.com/200x200?text=No+Image'
+                          'https://icons.veryicon.com/png/o/miscellaneous/fu-jia-intranet/product-29.png'
                         "
                         height="150px"
                         width="150px"
@@ -1224,27 +1286,34 @@ const historyDetail = ref(false);
                       <v-row>
                         <v-col cols="12" md="6">
                           <h3>First Name</h3>
-                          <v-text-field variant="outlined" required
-                            >emily</v-text-field
-                          >
+                          <v-text-field
+                            variant="outlined"
+                            required
+                            v-model="firstName"
+                          ></v-text-field>
                         </v-col>
                         <v-col cols="12" md="6">
                           <h3>Last Name</h3>
-                          <v-text-field variant="outlined" required
-                            >Johnson</v-text-field
-                          >
+                          <v-text-field
+                            variant="outlined"
+                            required
+                            v-model="lastName"
+                          ></v-text-field>
                         </v-col>
                       </v-row>
                       <v-row>
                         <v-col cols="12" md="6">
                           <h3>Email</h3>
-                          <v-text-field variant="outlined" required
-                            >emily.johnson@x.dummyjson.com</v-text-field
-                          >
+                          <v-text-field
+                            variant="outlined"
+                            required
+                            v-model="Email"
+                          ></v-text-field>
                         </v-col>
                         <v-col cols="12" md="6">
                           <h3>Phone</h3>
                           <v-text-field
+                            v-model="phone"
                             variant="outlined"
                             required
                           ></v-text-field>
@@ -1254,6 +1323,7 @@ const historyDetail = ref(false);
                         <v-col>
                           <h3>Address</h3>
                           <v-text-field
+                            v-model="address"
                             variant="outlined"
                             required
                           ></v-text-field>
@@ -1263,6 +1333,7 @@ const historyDetail = ref(false);
                         <v-col cols="12" md="4">
                           <h3>City</h3>
                           <v-text-field
+                            v-model="city"
                             variant="outlined"
                             required
                           ></v-text-field>
@@ -1270,6 +1341,7 @@ const historyDetail = ref(false);
                         <v-col cols="12" md="4">
                           <h3>State</h3>
                           <v-text-field
+                            v-model="state"
                             variant="outlined"
                             required
                           ></v-text-field>
@@ -1277,6 +1349,7 @@ const historyDetail = ref(false);
                         <v-col cols="12" md="4">
                           <h3>Zip Code</h3>
                           <v-text-field
+                            v-model="zip"
                             variant="outlined"
                             required
                           ></v-text-field>
@@ -1291,6 +1364,7 @@ const historyDetail = ref(false);
                         <v-col>
                           <h3>Cardholder Name</h3>
                           <v-text-field
+                            v-model="cardName"
                             variant="outlined"
                             required
                           ></v-text-field>
@@ -1300,6 +1374,7 @@ const historyDetail = ref(false);
                         <v-col>
                           <h3>Card Number</h3>
                           <v-text-field
+                            v-model="cardNumber"
                             variant="outlined"
                             required
                             label="1234 5678 9012 3456"
@@ -1310,6 +1385,7 @@ const historyDetail = ref(false);
                         <v-col cols="12" md="6">
                           <h3>Expiry</h3>
                           <v-text-field
+                            v-model="cardExpiry"
                             variant="outlined"
                             required
                             label="MM/YY"
@@ -1318,6 +1394,7 @@ const historyDetail = ref(false);
                         <v-col cols="12" md="6">
                           <h3>CVV</h3>
                           <v-text-field
+                            v-model="cardCVV"
                             variant="outlined"
                             required
                             label="123"
@@ -1401,7 +1478,7 @@ const historyDetail = ref(false);
                       <img
                         :src="
                           product.thumbnail ||
-                          'https://via.placeholder.com/200x200?text=No+Image'
+                          'https://icons.veryicon.com/png/o/miscellaneous/fu-jia-intranet/product-29.png'
                         "
                         height="80px"
                       />
@@ -1546,7 +1623,7 @@ const historyDetail = ref(false);
                   >
                 </div>
                 <v-btn
-                  @click="historyDetail = true"
+                  @click="openHistoryDetail(history)"
                   prepend-icon="mdi-eye-outline"
                   style="text-transform: capitalize"
                 >
@@ -1597,28 +1674,31 @@ const historyDetail = ref(false);
             </div>
 
             <!-- MODAL HISTORY DETAIL -->
+            <!-- Dialog -->
             <v-dialog v-model="historyDetail" max-width="1000" scrollable>
               <template #default>
-                <div class="dialog-scroll">
+                <div class="dialog-scroll" v-if="selectedHistory">
                   <v-card style="padding: 20px">
                     <v-card-title style="display: flex; align-items: center">
                       <div class="column" style="align-items: flex-start">
                         <h2 class="h2" style="margin: 0">
-                          Order #1755096124109 Details
+                          Order #{{ selectedHistory.id }}
                         </h2>
-                        <h3 class="h3-gray">Order placed on 8/13/2025</h3>
+                        <h3 class="h3-gray">
+                          Order placed on {{ selectedHistory.date }}
+                        </h3>
                       </div>
                       <v-spacer></v-spacer>
-                      <v-btn icon @click="historyDetail = false" variant="text">
+                      <v-btn icon @click="closeHistoryDetail" variant="text">
                         <v-icon>mdi-close</v-icon>
                       </v-btn>
                     </v-card-title>
 
                     <v-card-text>
+                      <!-- Total -->
                       <v-row class="mb-2">
                         <v-col cols="6">
                           <h2 class="h2">Order Status</h2>
-
                           <v-chip
                             color="green"
                             text-color="white"
@@ -1627,20 +1707,27 @@ const historyDetail = ref(false);
                             Completed
                           </v-chip>
                         </v-col>
-
                         <v-col cols="6">
                           <h2 class="h2">Total Amount</h2>
-                          <h2 class="h1">$10.99</h2>
+                          <h2 class="h1">${{ selectedHistory.total }}</h2>
                         </v-col>
                       </v-row>
+
                       <divider class="divider-small" />
                       <h2 class="h2">Items Ordered</h2>
                       <divider class="divider-xs" />
-                      <v-container class="grey-container">
+                      <v-container
+                        v-for="item in selectedHistory.items"
+                        :key="item.id"
+                        class="grey-container mb-2"
+                      >
                         <v-row class="align-center" no-gutters>
                           <v-col cols="auto">
                             <v-img
-                              :src="'https://dummyjson.com/image/i/products/1/thumbnail.jpg'"
+                              :src="
+                                item.thumbnail ||
+                                'https://dummyjson.com/image/i/products/1/thumbnail.jpg'
+                              "
                               height="75"
                               width="75"
                             ></v-img>
@@ -1648,38 +1735,50 @@ const historyDetail = ref(false);
 
                           <v-col>
                             <h2 class="h2 mb-1" style="font-weight: normal">
-                              Product Name
+                              {{ item.title }}
                             </h2>
-                            <h3 class="h3-gray mb-0">Quantity: 3 x $3.66</h3>
+                            <h3 class="h3-gray mb-0">
+                              Quantity: {{ item.quantity }} x ${{ item.price }}
+                            </h3>
                           </v-col>
+
                           <v-col
                             cols="auto"
                             class="d-flex align-center justify-end"
                           >
-                            <h2 class="h2">$99</h2>
+                            <h2 class="h2">
+                              ${{ (item.price * item.quantity).toFixed(2) }}
+                            </h2>
                           </v-col>
                         </v-row>
                       </v-container>
+
                       <divider class="divider-small" />
                       <h2 class="h2">Shipping Information</h2>
                       <divider class="divider-xs" />
                       <v-container class="grey-fill-container">
-                        <h3 class="h3">Emily Johnson</h3>
-                        <h3 class="h3" style="font-weight: normal">Jalan</h3>
+                        <h3 class="h3">
+                          {{ selectedHistory.firstName }}
+                          {{ selectedHistory.lastName }}
+                        </h3>
                         <h3 class="h3" style="font-weight: normal">
-                          Jakarta Pusat,Jakarta 123
+                          {{ selectedHistory.address }}
+                        </h3>
+                        <h3 class="h3" style="font-weight: normal">
+                          {{ selectedHistory.city }},
+                          {{ selectedHistory.state }} {{ selectedHistory.zip }}
                         </h3>
                         <h3
                           class="h3"
                           style="color: #868686; font-weight: normal"
                         >
-                          Email: emily.johnson@x.dummyjson.com
+                          Email: {{ selectedHistory.email }}
                         </h3>
                         <h3
                           class="h3"
                           style="color: #868686; font-weight: normal"
                         >
-                          Phone: 1
+                          Phone: {{ selectedHistory.phone }}
                         </h3>
                       </v-container>
                     </v-card-text>
