@@ -935,7 +935,7 @@ const closeHistoryDetail = () => {
                       text-overflow: ellipsis;
                     "
                   >
-                    {{ truncate(product.title, 15) }}
+                    {{ truncate(product.title, 10) }}
                   </v-card-title>
 
                   <v-card-subtitle>
@@ -1137,7 +1137,7 @@ const closeHistoryDetail = () => {
                       text-overflow: ellipsis;
                     "
                   >
-                    {{ truncate(product.title, 15) }}
+                    {{ truncate(product.title, 10) }}
                   </v-card-title>
 
                   <v-card-subtitle>
