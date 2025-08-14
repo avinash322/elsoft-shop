@@ -927,7 +927,14 @@ const closeHistoryDetail = () => {
                     height="200px"
                   />
 
-                  <v-card-title class="text-wrap">
+                  <v-card-title
+                    class="text-wrap"
+                    style="
+                      white-space: nowrap;
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                    "
+                  >
                     {{ truncate(product.title, 20) }}
                   </v-card-title>
 
@@ -1122,7 +1129,14 @@ const closeHistoryDetail = () => {
                     height="200px"
                   />
 
-                  <v-card-title class="text-wrap">
+                  <v-card-title
+                    class="text-wrap"
+                    style="
+                      white-space: nowrap;
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                    "
+                  >
                     {{ truncate(product.title, 20) }}
                   </v-card-title>
 
@@ -1264,7 +1278,7 @@ const closeHistoryDetail = () => {
 
                       <!-- Product info -->
                       <v-col>
-                        <h2 class="h2 mb-1">{{ product.title }}</h2>
+                        <h3 class="h3 mb-1">{{ product.title }}</h3>
                         <h1 class="h1">${{ product.price.toFixed(2) }}</h1>
                       </v-col>
 
