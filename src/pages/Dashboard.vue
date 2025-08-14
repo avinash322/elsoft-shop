@@ -295,6 +295,8 @@ const deleteProduct = async (id) => {
 // add product
 const newProductDialog = ref(false);
 
+const productForm = ref(null);
+
 const form = ref({
   id: null,
   title: "",
@@ -306,6 +308,21 @@ const form = ref({
 });
 
 const submitProduct = async () => {
+  if (
+    !form.value.title ||
+    !form.value.description ||
+    form.value.price === null ||
+    form.value.price === "" ||
+    form.value.stock === null ||
+    form.value.stock === "" ||
+    !form.value.brand ||
+    !form.value.category
+  ) {
+    snackbarMessage.value = "Please fill in all fields!";
+    snackbarColor.value = "info";
+    snackbar.value = true;
+    return;
+  }
   try {
     const response = await fetch("https://dummyjson.com/products/add", {
       method: "POST",
@@ -491,7 +508,7 @@ const completeOrder = () => {
     !cardCVV.value
   ) {
     snackbarMessage.value = "Please fill in all fields!";
-    snackbarColor.value = "";
+    snackbarColor.value = "info";
     snackbar.value = true;
     return;
   }
@@ -709,7 +726,7 @@ const closeHistoryDetail = () => {
 
               <div
                 style="height: 350px"
-                class="d-flex justify-center align-center"
+                class="d-flex justify-center align-center;justify-content: center"
               >
                 <v-row align="center" no-gutters>
                   <!-- Pie Chart -->
@@ -791,7 +808,7 @@ const closeHistoryDetail = () => {
               </v-card-subtitle>
 
               <v-card-text>
-                <v-form @submit.prevent="submitProduct">
+                <v-form ref="productForm">
                   <v-text-field
                     v-model="form.title"
                     label="Title"
@@ -1128,9 +1145,9 @@ const closeHistoryDetail = () => {
                           "
                         >
                           ${{
-                            (
+                            Number(
                               product.price *
-                              (1 + product.discountPercentage / 100)
+                                (1 + (product.discountPercentage || 0) / 100)
                             ).toFixed(2)
                           }}
                         </h3>
@@ -1664,7 +1681,7 @@ const closeHistoryDetail = () => {
                   :key="item.id"
                   :src="
                     item.thumbnail ||
-                    `https://via.placeholder.com/100x100?text=No+Image`
+                    `https://icons.veryicon.com/png/o/miscellaneous/fu-jia-intranet/product-29.png`
                   "
                   height="100"
                   width="100"
@@ -1726,7 +1743,7 @@ const closeHistoryDetail = () => {
                             <v-img
                               :src="
                                 item.thumbnail ||
-                                'https://dummyjson.com/image/i/products/1/thumbnail.jpg'
+                                'https://icons.veryicon.com/png/o/miscellaneous/fu-jia-intranet/product-29.png'
                               "
                               height="75"
                               width="75"
